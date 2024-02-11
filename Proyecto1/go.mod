@@ -1,3 +1,3 @@
-module myProject1
+module MIA_P1_201902416
 
 go 1.21.7

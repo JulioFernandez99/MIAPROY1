@@ -1,5 +1,4 @@
-
-package logica
+package Logica
 
 import (
 	"fmt"
@@ -8,12 +7,9 @@ import (
 	"encoding/binary"
 )
 
-var discos Disco
-var disckCreated bool = false
 
 type Disco struct {
-	Size [1024]byte
-	Create bool
+	Size []byte
 	FileName string
 	File *os.File
 }
@@ -34,7 +30,7 @@ func (d *Disco) CreateFIle() {
 	if err := CreateFile(d.GetFileName()); err != nil {
 		return
 	}
-	d.SetCreate(true)
+	
 } 
 
 //abre el archivo .disk
@@ -89,6 +85,7 @@ func OpenFile(name string) (*os.File, error) {
 }
 
 
+
 func (d *Disco)  InitDisk(file *os.File, data interface{}, position int64) error {
 	file.Seek(position, 0)
 	err := binary.Write(file, binary.LittleEndian, data)
@@ -110,10 +107,24 @@ func (d *Disco) ReadObject(file *os.File, data interface{}, position int64) erro
 	return nil
 }
 
-//Metodo set para el estado del disco
-func (d *Disco) GetCreate() bool {
-	return d.Create
+
+// InsertObject inserta un objeto en el disco desde el inicio del archivo
+func (d *Disco) InsertObject(data interface{}) error {
+	// Mover el puntero de escritura al inicio del archivo
+	d.File.Seek(0, 0)
+	
+	// Escribir el objeto en el disco
+	err := binary.Write(d.File, binary.LittleEndian, data)
+	if err != nil {
+		fmt.Println("Error al insertar el objeto:", err)
+		return err
+	}
+	
+	return nil
 }
+
+
+
 
 //Metodo get para el nombre del disco
 func (d *Disco) GetFileName() string {
@@ -125,8 +136,14 @@ func (d *Disco) SetFileName(FileName string ){
 	d.FileName = FileName
 }
 
-//Metodo get para estado del disco
-func (d *Disco) SetCreate(Create bool) {
-	d.Create = Create
+//set para el tamaño del disco
+func (d *Disco) SetSize(Size []byte) {
+	d.Size = Size
 }
 
+//get para el tamaño del disco
+func (d *Disco) GetSize() []byte {
+	return d.Size
+}
+
+//set para el ajuste del disco

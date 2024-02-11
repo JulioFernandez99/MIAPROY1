@@ -1,19 +1,18 @@
 package main
 
 import (
-	"fmt"
-	"myProject1/logica"
+	"MIA_P1_201902416/Analizador"
+	
 )
+
+//mkdisk -size=12 -unit=K -fit="BF" A
+//mkdisk -size=6 -unit=M B
+//mkdisk -size=412 C
+//mkdisk -size=9 -fit="FF" D
+
 
 
 func main() {
-
-	disco:=logica.Disco{}
-	
-	disco.SetFileName("./disks/disk1.disk")
-	disco.CreateDskFIle()
-	fmt.Println(disco.GetCreate())
+	Analizador.Run()	
 }
-
-
 
