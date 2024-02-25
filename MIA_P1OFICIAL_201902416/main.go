@@ -12,7 +12,7 @@ import (
 
 
 
-//fdisk -size=100 -type=L -unit=B -fit=bf -driveletter=A -name="Particion3"
+//fdisk -size=100 -type=L -unit=B -fit=bf -driveletter=A -name="Particion4"
 //fdisk -size=300 -driveletter=A -name=Particion1
 //iterar sobre las particiones
 //fmt.Println("Particiones",mbrPrueba.Mbr_partition)
@@ -29,9 +29,24 @@ import (
 //fdisk -add=1 -unit=M -driveletter=B -name="Particion2"
 
 //mount -driveletter=A -name=Particion2
-//fpartitions -driveletter=A   para saber si las particiones estan libres o no
+//fpartitions -driveletter=B   para saber si las particiones estan libres o no
 //unmount -id=A119
 
+
+
+//Creacion de particiones
+// fdisk -size=1 -unit=K -driveletter=A -name=Particion5
+// fdisk -type=E -driveletter=A -unit=B -name=Particion4 -size=100
+// fdisk -size=20 -type=L -unit=M -fit=bf -driveletter=A -name="ParticionL1"
+// fdisk -type=P -driveletter=A -name=Part2 -unit=K -size=200
+
+// Eliminacion de particiones
+// fdisk -delete=full -name="Part3" -driveletter=A
+// fdisk -name=part4 -delete=full -driveletter=A
+
+// Modificacion de particiones
+// fdisk -add=200100 -size=10 -unit=K -driveletter=A -name=particion2
+// fdisk -add=1 -unit=M -driveletter=A -name="Particion4"
 
 func main() {
 	Analizador.Run()	

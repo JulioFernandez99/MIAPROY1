@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	
 	"regexp"
 	"strconv"
 	"strings"
@@ -39,7 +40,12 @@ var (
 
 	driveletterUnMount = "A"
 	idUnMount = "A"
-		
+
+	existExtend bool
+
+	//variables del ebr
+	posicion int64
+	start int64
 	rePartitions = regexp.MustCompile(`(?:fpartitions\s+|-(mkdisk|\w+)=("[^"]+"|\S+))`)
 	reDisk  = regexp.MustCompile(`(?:mkdisk\s+|-(mkdisk|\w+)=("[^"]+"|\S+))`)
 	reRdisk = regexp.MustCompile(`(?:rmdisk\s+|-(mkdisk|\w+)=("[^"]+"|\S+))`)
@@ -75,7 +81,6 @@ func ReadLine() (string, error) {
 //Esta funcion procesa todos los comandos
 func ProcessInput(input string) {
 
-	
 	matchMkDisk := reDisk.FindAllStringSubmatch(input, -1)
 	comandDisk := strings.Trim(matchMkDisk[0][0], " ")
 
@@ -267,7 +272,7 @@ func processFDisk(match [][]string) {
 		} else if flagName == "type" {
 			flagValue = flagValue[:1]
 			flagValue = strings.ToLower(flagValue)
-			
+			//fmt.Println("TYPE",flagValue)
 			typeFDisk = flagValue
 		} else if flagName == "fit" {
 			flagValue = flagValue[:1]
@@ -289,62 +294,132 @@ func processFDisk(match [][]string) {
 		return
 	}
 
-	
+	existExtend=verificarExtendida(*mbrPrueba)
+	fmt.Println("ExistExtend",existExtend)
+	fmt.Println("TypeFDisk",typeFDisk)
 
+	if !existExtend && (typeFDisk == "p" || typeFDisk == "e" ) {
 	//Este for es para iterar sobre las particiones y buscar una libre
-	for i := range mbrPrueba.Mbr_partition {
+		for i := range mbrPrueba.Mbr_partition {
 
-		//Aqui obtengo el nombre de la particion
-		cadenaByte = string(mbrPrueba.Mbr_partition[i].Part_name[:])
-		cadenaByte = strings.ReplaceAll(cadenaByte, "”", "")
-		cadenaByte = strings.Trim(cadenaByte, "\x00")
+			//Aqui obtengo el nombre de la particion
+			cadenaByte = string(mbrPrueba.Mbr_partition[i].Part_name[:])
+			cadenaByte = strings.ReplaceAll(cadenaByte, "”", "")
+			cadenaByte = strings.Trim(cadenaByte, "\x00")
 
-		//Aqui convierto el valor de addFDisk a entero
-		addValue, _ := strconv.ParseInt(addFDisk, 10, 64)
-
-		//Este if es para verificar si la particion esta libre
-		if mbrPrueba.Mbr_partition[i].Part_s == 0  && deleteFDisk == "false" && addFDisk == "0"{
+			//Aqui convierto el valor de addFDisk a entero
+			addValue, _ := strconv.ParseInt(addFDisk, 10, 64)
 
 			
-			//Aqui asigno los valores a la particion
-			mbrPrueba.Mbr_partition[i].Part_tyPe = typeFDisk[0]
-			mbrPrueba.Mbr_partition[i].Part_fit = fitFDisk[0]
-			mbrPrueba.Mbr_partition[i].Part_s = GetSizeUnit(sizeFDisk, unitFDisk)
-			copy(mbrPrueba.Mbr_partition[i].Part_name[:], nameFDisk)	
-			mbrPrueba.Mbr_partition[i].Part_correlative = int64(i + 1)
-			mbrPrueba.Mbr_partition[i].Part_start = GetSizeStart(i,*mbrPrueba)	
-			fmt.Println("Particion creada con exito", mbrPrueba.Mbr_partition[i])
-			
-			break
 
-		}else if deleteFDisk == "full" && cadenaByte == nameFDisk && addFDisk == "0" { 
-			//Este if es para eliminar una particion del mbr
-			fmt.Println("Eliminará la partición", deleteFDisk)
-			mbrPrueba.Mbr_partition[i]= Structs.Partition{}
-			mbrPrueba.Mbr_partition[i].Part_s = 0
-			fmt.Println("Particion eliminada con exito")
-			deleteFDisk = "false"
-			break
-		}else if addFDisk != "0" && cadenaByte == nameFDisk {
-			//Este if es para aumentar el tamaño de una particion del mbr
-			if unitFDisk == "k" {
-				addValue = addValue * 1000
-			}else if unitFDisk == "m" {
-				addValue = addValue * 1000000
+			//Este if es para verificar si la particion esta libre
+			if mbrPrueba.Mbr_partition[i].Part_s == 0  && deleteFDisk == "false" && addFDisk == "0"{
+				//Aqui asigno los valores a la particion
+				mbrPrueba.Mbr_partition[i].Part_tyPe = typeFDisk[0]
+				mbrPrueba.Mbr_partition[i].Part_fit = fitFDisk[0]
+				mbrPrueba.Mbr_partition[i].Part_s = GetSizeUnit(sizeFDisk, unitFDisk)
+				copy(mbrPrueba.Mbr_partition[i].Part_name[:], nameFDisk)	
+				mbrPrueba.Mbr_partition[i].Part_correlative = int64(i + 1)
+				mbrPrueba.Mbr_partition[i].Part_start = int64(binary.Size(mbrPrueba)) 
+				fmt.Println("Particion creada con exito", mbrPrueba.Mbr_partition[i])
+				break
+
+			}else if deleteFDisk == "full" && cadenaByte == nameFDisk && addFDisk == "0" { 
+				//Este if es para eliminar una particion del mbr
+				fmt.Println("Eliminará la partición", deleteFDisk)
+				mbrPrueba.Mbr_partition[i]= Structs.Partition{}
+				mbrPrueba.Mbr_partition[i].Part_s = 0
+				fmt.Println("Particion eliminada con exito")
+				deleteFDisk = "false"
+				break
+			}else if addFDisk != "0" && cadenaByte == nameFDisk {
+				//Este if es para aumentar el tamaño de una particion del mbr
+				if unitFDisk == "k" {
+					addValue = addValue * 1000
+				}else if unitFDisk == "m" {
+					addValue = addValue * 1000000
+				}
+				mbrPrueba.Mbr_partition[i].Part_s = mbrPrueba.Mbr_partition[i].Part_s + addValue
+				fmt.Println("Particion aumentada con exito")
+				addFDisk = "0"
+				break
+			}else if i == 3 && (deleteFDisk == "full" || addFDisk != "0") {
+				fmt.Println("No se encontro una particion con el nombre:", nameFDisk)
+			}else if i == 3 && deleteFDisk == "false" {
+				fmt.Println("Todas las particiones están ocupadas")
 			}
-			mbrPrueba.Mbr_partition[i].Part_s = mbrPrueba.Mbr_partition[i].Part_s + addValue
-			fmt.Println("Particion aumentada con exito")
-			addFDisk = "0"
-			break
-		}else if i == 3 && (deleteFDisk == "full" || addFDisk != "0") {
-			fmt.Println("No se encontro una particion con el nombre:", nameFDisk)
-		}else if i == 3 && deleteFDisk == "false" {
-			fmt.Println("Todas las particiones están ocupadas")
+		}
+		//Aqui guardo el mbr con la particion creada
+		typeFDisk = "p"
+
+		Logica.SaveMBR(driveletterFDisk, *mbrPrueba)
+	}else if existExtend && typeFDisk == "l"{
+		
+		var ebr  Structs.EBR
+
+		posicion = int64(getExtendida(*mbrPrueba))
+		start = mbrPrueba.Mbr_partition[posicion].Part_start + int64(binary.Size(ebr))
+
+		ebr.Part_mount = 0
+		ebr.Part_fit = fitFDisk[0]
+		ebr.Part_start = start
+		ebr.Part_s = int64(sizeFDisk)
+		ebr.Part_next = start+int64(binary.Size(ebr))
+		copy(ebr.Part_name[:], nameFDisk)
+
+		fmt.Println("Start", start)
+		fmt.Println("Next", ebr.Part_next)
+		
+		
+		Logica.InsertEbr(driveletterFDisk,start,ebr)
+
+		// fmt.Println("Viene una logica,en la particion",getExtendida(*mbrPrueba))
+		
+		// // Remove the unused variable declaration
+		// var ebr  Structs.EBR
+
+		// posicion = int64(getExtendida(*mbrPrueba))
+		// start = mbrPrueba.Mbr_partition[posicion].Part_start + int64(binary.Size(ebr))
+		
+		// fmt.Println("Start", start)
+		// result := Logica.GetType(driveletterFDisk, start)
+
+		// if result {
+		// 	fmt.Println("Es un cero")
+		// } else {
+		// 	fmt.Println("No es un cero")
+		// }
+
+	}else if !existExtend && typeFDisk == "l"{
+		fmt.Println("No existe una particion extendida")
+	}
+
+
+	typeFDisk = "p" //reinicio la variable para que no afecte a los demas comandos
+}
+
+
+
+
+func verificarExtendida(mbr Structs.MBR ) bool{
+	for i := range mbr.Mbr_partition {
+		//fmt.Println(string(mbr.Mbr_partition[i].Part_tyPe))
+		if string(mbr.Mbr_partition[i].Part_tyPe)	== "e" && (typeFDisk == "e" || typeFDisk == "l")	{
+			fmt.Println("Ya existe una particion extendida")
+			return true
 		}
 	}
-	//Aqui guardo el mbr con la particion creada
-	Logica.SaveMBR(driveletterFDisk, *mbrPrueba)
+	
+	return false
+}
 
+func getExtendida(mbr Structs.MBR) int{
+	for i := range mbr.Mbr_partition {
+		if string(mbr.Mbr_partition[i].Part_tyPe)	== "e" {
+			return i
+		}
+	}
+	return 0
 }
 
 //Esta funcion procesa el comando rmdisk
@@ -484,7 +559,7 @@ func PrintMBR(mbr Structs.MBR,i int) {
 	fmt.Printf("Type %c\n",mbr.Mbr_partition[i].Part_tyPe)
 	fmt.Printf("Fit %c\n",mbr.Mbr_partition[i].Part_fit)
 	fmt.Println("Start",mbr.Mbr_partition[i].Part_start)
-	fmt.Println("Size",mbr.Mbr_partition[i].Part_s)
+	fmt.Println("Size ",mbr.Mbr_partition[i].Part_s)
 	fmt.Println("Name",mbr.Mbr_partition[i].Part_name)
 	fmt.Println("Correlative",mbr.Mbr_partition[i].Part_correlative)
 	fmt.Printf("ID %s\n",mbr.Mbr_partition[i].Part_id)
